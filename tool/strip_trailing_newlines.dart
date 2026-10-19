@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 /// Finds text files that end with a newline (LF/CRLF at EOF) and removes it.
 ///
 /// Usage:
