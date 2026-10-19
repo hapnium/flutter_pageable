@@ -38,8 +38,8 @@ import '../models/pageable_builder_delegate.dart';
 /// PagedGridView<int, Item>(
 ///   controller: _pagedController,
 ///   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
-///   builderDelegate: PagedChildBuilderDelegate<Item>(
-///     itemBuilder: (context, item, index) => GridTile(child: Text(item.title)),
+///   builderDelegate: PageableBuilderDelegate<Item>(
+///     itemBuilder: (context, metadata) => GridTile(child: Text(metadata.item.title)),
 ///   ),
 /// )
 /// ```

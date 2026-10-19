@@ -37,8 +37,8 @@ import '../models/pageable_builder_delegate.dart';
 /// ```dart
 /// PagedPageView<int, Item>(
 ///   controller: _pagedController,
-///   builderDelegate: PagedChildBuilderDelegate<Item>(
-///     itemBuilder: (context, item, index) => Center(child: Text(item.title)),
+///   builderDelegate: PageableBuilderDelegate<Item>(
+///     itemBuilder: (context, metadata) => Center(child: Text(metadata.item.title)),
 ///   ),
 /// )
 /// ```

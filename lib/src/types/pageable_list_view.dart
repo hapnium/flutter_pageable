@@ -40,8 +40,8 @@ const Widget _defaultSpacing = SizedBox.shrink();
 /// ```dart
 /// PageableListView<int, Item>(
 ///   controller: _pagedController,
-///   builderDelegate: PagedChildBuilderDelegate<Item>(
-///     itemBuilder: (context, item, index) => ListTile(title: Text(item.title)),
+///   builderDelegate: PageableBuilderDelegate<Item>(
+///     itemBuilder: (context, metadata) => ListTile(title: Text(metadata.item.title)),
 ///   ),
 /// )
 /// ```

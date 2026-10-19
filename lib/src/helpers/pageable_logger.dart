@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
+
 /// Optional logger interface used for logging pageable-related messages.
 ///
 /// This allows injecting custom logging behavior (e.g., logging to file,
@@ -25,6 +27,8 @@ abstract interface class PageableLogger {
 class ConsolePageableLogger implements PageableLogger {
   @override
   void log(String message, {String? tag}) {
-    print('[${tag ?? 'Pageable'}] $message');
+    if (kDebugMode) {
+      print('[${tag ?? 'Pageable'}] $message');
+    }
   }
 }

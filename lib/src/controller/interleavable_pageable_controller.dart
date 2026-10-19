@@ -66,8 +66,8 @@ import 'pageable_controller.dart';
 /// // Works directly with existing pageable widgets:
 /// PageableListView<int, Post>(
 ///   controller: controller,
-///   builderDelegate: PagedChildBuilderDelegate<Post>(
-///     itemBuilder: (context, post, index) => PostTile(post: post),
+///   builderDelegate: PageableBuilderDelegate<Post>(
+///     itemBuilder: (context, metadata) => PostTile(post: metadata.item),
 ///   ),
 /// );
 ///
@@ -156,7 +156,7 @@ class InterleavablePageableController<PageKey, Item>
 
   /// {@macro interleavable_pageable_controller}
   ///
-  /// The [strategy] determines how items from multiple sources are interleaved
+  /// The [_strategy] determines how items from multiple sources are interleaved
   /// and which sources are fetched from on each pagination cycle.
   ///
   /// The [sources] list provides the initial set of data sources. Sources can
@@ -167,7 +167,7 @@ class InterleavablePageableController<PageKey, Item>
   /// control behavior like safe mode, logging, and retry configuration.
   InterleavablePageableController({
     /// The merging and routing logic applied to the data sources.
-    required InterleaveStrategy<Item> strategy,
+    required this._strategy,
 
     /// The initial list of data sources to interleave. Defaults to empty.
     /// Sources can be added later via [addSource].
@@ -194,8 +194,7 @@ class InterleavablePageableController<PageKey, Item>
     super.retryIf,
     super.retryDelayBuilder,
     super.onRetryAttempt,
-  })  : _strategy = strategy,
-        _interleaveLogger = logger ?? (showLog == true ? ConsolePageableLogger() : null),
+  })  : _interleaveLogger = logger ?? (showLog == true ? ConsolePageableLogger() : null),
         super(
           // Pass dummy values to the parent. The parent's linear fetch logic
           // is completely bypassed by our overrides of fetchFirstPage and

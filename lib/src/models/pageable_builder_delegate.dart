@@ -26,7 +26,7 @@ typedef ItemWidgetBuilder<ItemType> = Widget Function(BuildContext context, Item
 /// Example:
 /// ```dart
 /// PageableBuilderDelegate<Product>(
-///   itemBuilder: (context, product, index) => ProductCard(product),
+///   itemBuilder: (context, metadata) => ProductCard(metadata.item),
 ///   firstPageProgressIndicatorBuilder: (context) => CircularProgressIndicator(),
 ///   newPageProgressIndicatorBuilder: (context) => CupertinoActivityIndicator(),
 ///   firstPageErrorIndicatorBuilder: (context) => Text("Failed to load items"),
@@ -59,7 +59,7 @@ class PageableBuilderDelegate<Item> {
   ///
   /// Example:
   /// ```dart
-  /// itemBuilder: (context, item, index) => ListTile(title: Text(item.title)),
+  /// itemBuilder: (context, metadata) => ListTile(title: Text(metadata.item.title)),
   /// ```
   final ItemWidgetBuilder<Item> itemBuilder;
 

@@ -1,7 +1,7 @@
 import 'dart:collection';
 import 'dart:typed_data';
 
-import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart';
 
 import 'equals_and_hash_code.dart';
 import 'to_string.dart';
