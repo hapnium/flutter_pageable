@@ -1,0 +1,28 @@
+name: flutter_pageable
+description: "Pagination for Flutter — typed page controllers, list/grid/page/staggered views, multi-source interleaved feeds, caching, retry, polling and pull-to-refresh."
+version: 0.1.0
+homepage: https://github.com/Hapnium/flutter_pageable
+repository: https://github.com/Hapnium/flutter_pageable
+
+topics:
+  - pagination
+  - listview
+  - widgets
+  - infinite-scroll
+  - state-management
+
+environment:
+  sdk: ^3.13.4
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  meta: ^1.17.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
