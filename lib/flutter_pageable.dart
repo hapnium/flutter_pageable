@@ -231,3 +231,8 @@ export 'src/helpers/regex_utils.dart';
 export 'src/helpers/typedefs.dart';
 export 'src/helpers/equals_and_hash_code.dart';
 export 'src/helpers/to_string.dart';
+
+/// ▸ MATH
+export "src/math/big_integer.dart";
+export "src/math/uuid.dart";
+export "src/math/uuid_range_builder.dart";

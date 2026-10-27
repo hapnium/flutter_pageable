@@ -5,7 +5,7 @@
 **Typed pagination controllers, drop-in scrollable views, and multi-source interleaved feeds for Flutter.**
 
 [![pub package](https://img.shields.io/pub/v/flutter_pageable.svg?logo=dart&logoColor=white&color=0b2ab5)](https://pub.dev/packages/flutter_pageable)
-[![tests](https://img.shields.io/badge/tests-440%2B%20passing-brightgreen.svg?logo=github)](https://github.com/hapnium/flutter_pageable)
+[![tests](https://img.shields.io/badge/tests-460%2B%20passing-brightgreen.svg?logo=github)](https://github.com/hapnium/flutter_pageable)
 [![dependencies](https://img.shields.io/badge/dependencies-zero%203rd--party-success.svg)](pubspec.yaml)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![platform](https://img.shields.io/badge/platform-android%20%7C%20ios%20%7C%20web%20%7C%20macos%20%7C%20linux%20%7C%20windows-lightgrey)](https://pub.dev/packages/flutter_pageable)
@@ -35,13 +35,13 @@ import 'package:flutter_pageable/flutter_pageable.dart';
 
 ## ✨ Features
 
-* **`PageableController<PageKey, Item>`** — A `ValueNotifier`-based controller that owns the full pagination lifecycle: fetching, duplicate-fetch deduplication, retry with backoff, polling, snapshot caching, and lifecycle-safe disposal. Page keys are strictly typed — use `int` offsets, `String` cursors, or custom composite keys.
+* **`PageableController<PageKey, Item>`** — A `ValueNotifier`-based controller that owns the full pagination lifecycle: fetching, duplicate-fetch deduplication, retry with backoff, polling, snapshot caching, and lifecycle-safe disposal. Each controller has a unique identity for equality and diagnostic log tags. Page keys are strictly typed — use `int` offsets, `String` cursors, or custom composite keys.
 * **Drop-in Scrollable Views** — `PageableListView`, `PageableGridView`, `PageablePageView`, and `PageableStaggeredView`, each wired directly to a controller and a builder delegate.
 * **`PageableBuilderDelegate`** — A single declarative delegate for your item builder alongside dedicated widget slots for every pagination state: first-page loading, next-page loading, previous-page loading, all three error states, empty list, and end-of-list.
 * **Interleaved Multi-Source Feeds** — `InterleavablePageableController` merges multiple independent paginated sources (feed + ads + suggestions) into one unified stream with strategy-driven ordering and **per-source error isolation**.
 * **Caching, Retry & Polling** — Pluggable snapshot cache (`PageableCache`), configurable `maxRetries` / `retryDelay` / `retryIf` / `retryDelayBuilder`, and automatic interval polling that pauses when hidden.
 * **Pull-to-Refresh** — `PullToRefresh` wrapper supporting Material, Cupertino, and custom indicator types.
-* **Bundled Utilities** — `Optional`, primitive extension methods, `EqualsAndHashCode`, typed streams (`IntStream`, `DoubleStream`, `GenericStream`), and `Collector` helpers vendored directly so the package stands completely alone.
+* **Bundled Utilities** — `Optional`, primitive extension methods, `EqualsAndHashCode`, typed streams (`IntStream`, `DoubleStream`, `GenericStream`), `Collector`, arbitrary-precision `BigInteger`, and UUID generation/parsing helpers vendored directly so the package stands completely alone.
 
 ---
 
@@ -51,13 +51,34 @@ Add `flutter_pageable` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_pageable: ^0.0.1
+  flutter_pageable: ^0.0.2
 ```
 
 Fetch the package:
 
 ```sh
 flutter pub get
+```
+
+## 🧭 Example App
+
+The [`example/`](example/) directory contains a runnable showcase app backed by deterministic local data:
+
+```sh
+cd example
+flutter pub get
+flutter run
+flutter test
+```
+
+The app demonstrates typed offset and cursor pagination, earlier-page loading, loading/error/empty/completed states, pull-to-refresh, snapshot caching, polling controls, reload keys, automatic-load enable/disable, every pageable view layout, interleaved feeds with all three strategies and runtime source changes, source failure isolation/retry, and bundled utility helpers. Its widget tests exercise these flows without network access.
+
+The example includes a web runner and can be launched directly in Chrome:
+
+```sh
+cd example
+flutter pub get
+flutter run -d chrome
 ```
 
 ---
@@ -375,6 +396,12 @@ Duration(minutes: 5, seconds: 7).asTime;   // '05:07'
 
 // Chunk a plain List into PageResults (ideal for unit tests & UI previews)
 final pages = List.generate(100, (i) => 'item $i').buildPageablePages(pageSize: 25);
+
+// Arbitrary-precision integers and UUIDs
+final large = BigInteger('123456789012345678901234567890');
+final sum = large + BigInteger.fromInt(42);
+final id = Uuid.randomUuid(); // UUID v4
+final stableId = Uuid.nameUuidFromString(Uuid.NAMESPACE_DNS, 'example.com'); // UUID v5
 ```
 
 **Additional bundled helpers:**
@@ -382,14 +409,23 @@ final pages = List.generate(100, (i) => 'item $i').buildPageablePages(pageSize: 
 * `Instance` — Runtime type checking helpers.
 * `EqualsAndHashCode` — Value-equality mixin.
 * Typed functional streams — `IntStream`, `DoubleStream`, `GenericStream`, and `Collector` aggregation helpers.
+* `BigInteger` — Arbitrary-precision arithmetic, bitwise operations, comparisons and modular arithmetic.
+* `Uuid` — UUID parsing/validation, byte serialization, version 1/4/5 generation, standard namespaces and injectable random-byte builders.
 
 ---
 
 ## 🧪 Testing
 
-The package is backed by **440+ passing tests** covering controllers, interleaved feeds, strategies, state models, delegates, and utilities:
+The package tests cover controllers, interleaved feeds, strategies, state models, delegates, utilities, `BigInteger`, and UUID generation:
 
 ```sh
+flutter test
+```
+
+The standalone example app also has widget tests:
+
+```sh
+cd example
 flutter test
 ```
 

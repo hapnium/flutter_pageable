@@ -1,0 +1,21 @@
+name: flutter_pageable_example
+description: A feature showcase for the flutter_pageable package.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_pageable:
+    path: ../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
