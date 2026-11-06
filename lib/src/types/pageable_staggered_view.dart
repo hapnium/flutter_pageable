@@ -378,17 +378,12 @@ class PageableStaggeredView<Page, Item> extends StatelessWidget {
   Widget build(BuildContext context) => PageableLayoutBuilder(
     controller: controller,
     builderDelegate: builderDelegate,
-    completedBuilder: (context, count, widgetBuilder, itemBuilder) => _build(context, count, widgetBuilder, itemBuilder),
-    loadingBuilder: (context, count, widgetBuilder, itemBuilder) => _build(context, count, widgetBuilder, itemBuilder),
-    errorBuilder: (context, count, widgetBuilder, itemBuilder) => _build(context, count, widgetBuilder, itemBuilder),
+    completedBuilder: _build,
+    loadingBuilder: _build,
+    errorBuilder: _build,
   );
 
-  Widget _build(
-    BuildContext context,
-    int count,
-    WidgetBuilder? widgetBuilder,
-    IndexedWidgetBuilder itemBuilder,
-  ) {
+  Widget _build(BuildContext context, int count, WidgetBuilder? widgetBuilder, IndexedWidgetBuilder itemBuilder) {
     assert(crossAxisCount > 0, 'crossAxisCount must be greater than zero.');
 
     final hasSeparator = separatorBuilder.isNotNull;
@@ -396,7 +391,7 @@ class PageableStaggeredView<Page, Item> extends StatelessWidget {
     final totalSeparators = hasSeparator
         ? PageableHelper.calculateTotalSeparators(strategy, separatorBuilder, context, count)
         : 0;
-    final baseItemCount = widgetBuilder != null ? count - 1 : count;
+    final baseItemCount = count;
     final totalSlotCount = baseItemCount + totalSeparators;
 
     bool canShowSeparator(int index) {

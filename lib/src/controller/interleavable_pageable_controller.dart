@@ -389,20 +389,57 @@ class InterleavablePageableController<PageKey, Item> extends PageableController<
   /// Hard resets all internal source states, clears errors, and initiates a
   /// brand new concurrent fetch from the beginning.
   ///
-  /// Unlike [fetchFirstPage], this method:
+  /// This behaves like an initial load: previously loaded items are cleared
+  /// immediately and the status becomes [PageableStatus.LOADING_FIRST_PAGE].
+  /// It also:
   /// - Resets every source's internal buffer, cursors, and error state
   /// - Clears the synthetic page key counter
   /// - Clears all per-source errors
-  /// - Sets status to [PageableStatus.REFRESHING] before fetching
   ///
   /// After all sources complete their first-page fetch, the results are merged
   /// into a fresh synthetic page.
+  ///
+  /// Use [refreshSilently] to keep the current items visible behind a
+  /// [PageableStatus.REFRESHING] status while re-fetching.
   @override
   Future<void> refresh() async {
     if (useSafeMode && !mounted) return;
     debugAssertNotDisposed();
 
-    _log('Refreshing all sources');
+    _log('Refreshing all sources from a clean first-page state');
+    _isFetching = true;
+    _sourceErrors.clear();
+    _syntheticPageKey = 0;
+    value = value.reset();
+
+    try {
+      for (final entry in _sources.values) {
+        entry.reset();
+      }
+
+      await Future.wait(_sources.values.map((entry) => _fetchSourceFirstPage(entry)));
+
+      if (useSafeMode && !mounted) return;
+      debugAssertNotDisposed();
+
+      _reinterleave();
+    } finally {
+      _isFetching = false;
+    }
+  }
+
+  /// Hard resets all internal source states and re-fetches from the beginning
+  /// while keeping the currently visible items on screen.
+  ///
+  /// Unlike [refresh], the existing interleaved items are preserved and the
+  /// status becomes [PageableStatus.REFRESHING] until the fresh results are
+  /// merged.
+  @override
+  Future<void> refreshSilently() async {
+    if (useSafeMode && !mounted) return;
+    debugAssertNotDisposed();
+
+    _log('Refreshing all sources silently');
     _isFetching = true;
     _sourceErrors.clear();
     _syntheticPageKey = 0;

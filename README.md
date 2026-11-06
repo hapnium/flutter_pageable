@@ -51,7 +51,7 @@ Add `flutter_pageable` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_pageable: ^0.0.2
+  flutter_pageable: ^0.0.3
 ```
 
 Fetch the package:
@@ -161,7 +161,7 @@ Every controller, view, and delegate communicates through a deterministic 10-sta
 | `NEW_PAGE_ERROR` | Fetching a subsequent page failed (already-loaded items remain visible). |
 | `PREVIOUS_PAGE_ERROR` | Fetching an earlier page failed. |
 | `COMPLETED` | All available pages have been loaded. |
-| `REFRESHING` | A full refresh is currently in progress. |
+| `REFRESHING` | A silent refresh is in progress; existing items remain visible. |
 
 ---
 
@@ -189,6 +189,7 @@ await controller.fetchFirstPage();
 await controller.fetchNextPage();
 await controller.fetchPreviousPage();  // Active when getPreviousPageKey is configured
 await controller.refresh();            // Hard reset + refetch from first page
+await controller.refreshSilently();    // Refetch first page, keeping current items
 await controller.retry();              // Re-attempt failed page fetches
 controller.clear();                    // Wipe all items and reset state
 await controller.setEnabled(false);    // Pause automatic scroll-driven loading

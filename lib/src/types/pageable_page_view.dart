@@ -491,12 +491,12 @@ class PageablePageView<Page, Item> extends StatelessWidget {
   Widget build(BuildContext context) => PageableLayoutBuilder(
     controller: controller,
     builderDelegate: builderDelegate,
-    completedBuilder: (context, index, widgetBuilder, itemBuilder) => _build(index, widgetBuilder, itemBuilder, context),
-    loadingBuilder: (context, index, widgetBuilder, itemBuilder) => _build(index, widgetBuilder, itemBuilder, context),
-    errorBuilder: (context, index, widgetBuilder, itemBuilder) => _build(index, widgetBuilder, itemBuilder, context),
+    completedBuilder: _build,
+    loadingBuilder: _build,
+    errorBuilder: _build,
   );
 
-  Widget _build(int count, WidgetBuilder? widgetBuilder, IndexedWidgetBuilder itemBuilder, BuildContext context) {
+  Widget _build(BuildContext context, int count, WidgetBuilder? widgetBuilder, IndexedWidgetBuilder itemBuilder) {
     bool hasSeparator = separatorBuilder.isNotNull;
     PageableSeparatorStrategy strategy = separatorStrategy ?? PageableHelper.defaultStrategy;
     int totalSeparators = hasSeparator

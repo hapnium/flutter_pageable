@@ -166,7 +166,8 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   /// Interval for automatically refreshing the first page.
   ///
   /// When non-null, [startPolling] is called after initialization; use
-  /// [stopPolling] to cancel. Polling is skipped while [enabled] is false.
+  /// [stopPolling] to cancel. Polls run [refreshSilently] so loaded items stay
+  /// visible. Polling is skipped while [enabled] is false.
   final Duration? pollInterval;
 
   /// Whether polling pauses while the app is in the background.
@@ -179,7 +180,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   ///
   /// When set without an explicit [cache], an [InMemoryPageableCache] is
   /// used. The controller restores the last snapshot on initialization (then
-  /// refreshes from the source) and persists every successful load.
+  /// silently refreshes from the source) and persists every successful load.
   final String? cacheKey;
 
   /// Storage used with [cacheKey] for snapshot hydration and persistence.
@@ -283,10 +284,11 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   ///   reload-key effects are skipped until [setEnabled] turns it on.
   /// - [_reloadKey]: external reload token consumed by [setReloadKey].
   /// - [resetOnReloadKeyChange]: wipe visible state on [setReloadKey].
-  /// - [pollInterval]: automatically [refresh] on this cadence (see [startPolling]).
+  /// - [pollInterval]: automatically [refreshSilently] on this cadence (see
+  ///   [startPolling]).
   /// - [pausePollingWhenHidden]: pause polling while the app is backgrounded.
-  /// - [cacheKey]/[cache]: hydrate the last snapshot on init (then refresh)
-  ///   and persist every successful load.
+  /// - [cacheKey]/[cache]: hydrate the last snapshot on init (then
+  ///   [refreshSilently]) and persist every successful load.
   /// - [showLog]: enable or disable default console logging.
   /// - [logger]: custom logger instance; overrides [showLog] setting.
   ///
@@ -530,7 +532,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   /// Calls with an unchanged key are ignored. When [reset] (or
   /// [resetOnReloadKeyChange] when [reset] is null) is true, visible state is
   /// wiped before reloading; otherwise existing items stay on screen behind
-  /// a [PageableStatus.REFRESHING] status via [refresh].
+  /// a [PageableStatus.REFRESHING] status via [refreshSilently].
   Future<void> setReloadKey(Object? key, {bool? reset}) async {
     trackOperation('setReloadKey');
     debugAssertNotDisposed();
@@ -547,13 +549,14 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       value = PageableView.initial(showLog: value.showLog, pageSize: value.pageSize);
       await fetchFirstPage();
     } else {
-      await refresh();
+      await refreshSilently();
     }
   }
 
-  /// Starts automatic [refresh] polling on [pollInterval].
+  /// Starts automatic [refreshSilently] polling on [pollInterval].
   ///
-  /// Safe to call multiple times; does nothing when [pollInterval] is null.
+  /// Polling keeps existing items visible instead of flashing the first-load
+  /// UI. Safe to call multiple times; does nothing when [pollInterval] is null.
   void startPolling() {
     trackOperation('startPolling');
     final interval = pollInterval;
@@ -565,11 +568,11 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       if (pausePollingWhenHidden && _appPaused) return;
       if (isFetching) return;
       
-      await refresh();
+      await refreshSilently();
     });
   }
 
-  /// Stops automatic [refresh] polling started by [startPolling].
+  /// Stops automatic [refreshSilently] polling started by [startPolling].
   void stopPolling() {
     trackOperation('stopPolling');
     _pollTimer?.cancel();
@@ -656,7 +659,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   /// Restores the cached snapshot (if any), then loads fresh data.
   ///
   /// Cached items are shown immediately with [PageableStatus.LOADED_PAGE],
-  /// then a [refresh] replaces them (keeping them visible behind
+  /// then a [refreshSilently] replaces them (keeping them visible behind
   /// [PageableStatus.REFRESHING]); with no cache hit, [fetchFirstPage] runs.
   Future<void> _hydrateAndLoad() async {
     trackOperation('_hydrateAndLoad');
@@ -685,7 +688,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     if (!mounted) return;
     
     if (value.hasData) {
-      await refresh();
+      await refreshSilently();
     } else {
       await fetchFirstPage();
     }
@@ -783,7 +786,15 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       }
       return;
     }
-    
+
+    await _fetchFirstPage(operation: 'fetchFirstPage');
+  }
+
+  /// Performs the first-page fetch without the concurrency guard.
+  ///
+  /// Shared by [fetchFirstPage] and [refresh], which coordinate their own
+  /// in-flight operations before calling this.
+  Future<void> _fetchFirstPage({required String operation}) async {
     _log('Fetching first page');
     final fetchCompleter = _beginFetchOperation();
     final requestId = ++_requestId;
@@ -805,14 +816,14 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
         clearError: true,
       );
 
-      final items = await _fetchPageWithRetry(firstPageKey, operation: 'fetchFirstPage');
+      final items = await _fetchPageWithRetry(firstPageKey, operation: operation);
 
       if (requestId != _requestId) {
-        _log('fetchFirstPage result ignored because a newer operation superseded it');
+        _log('$operation result ignored because a newer operation superseded it');
         return;
       }
       if (useSafeMode && !mounted) {
-        _log('fetchFirstPage result ignored because controller is disposed');
+        _log('$operation result ignored because controller is disposed');
         return;
       }
       debugAssertNotDisposed();
@@ -1144,13 +1155,52 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     return items.length < _pageSize;
   }
   
-  /// Refreshes the data by fetching the first page again.
+  /// Refreshes the data by reloading it from a clean first-page state.
   ///
-  /// Cancels ongoing fetches and resets the controller state.
+  /// This is a hard refresh: currently loaded pages, cursors, and errors are
+  /// cleared immediately and the status becomes
+  /// [PageableStatus.LOADING_FIRST_PAGE], so the UI renders its normal
+  /// first-load experience. The first page is then fetched and applied exactly
+  /// like an initial load.
+  ///
+  /// Use [refreshSilently] when existing items should stay visible while the
+  /// first page is re-fetched.
   Future<void> refresh() async {
     if (useSafeMode && !mounted) return;
 
     trackOperation('refresh');
+    debugAssertNotDisposed();
+
+    // Cancel pending work and invalidate any in-flight results.
+    _debounceTimer?.cancel();
+    _fetchingPages.clear();
+    _requestId += 1;
+
+    _log('Refreshing data from a clean first-page state');
+    value = PageableView.initial(showLog: value.showLog, pageSize: value.pageSize);
+
+    // Let any invalidated fetch unwind before starting the fresh one so only
+    // one fetch owns the controller.
+    final inFlight = _currentFetchCompleter;
+    if (isFetching && inFlight != null && !inFlight.isCompleted) {
+      await inFlight.future;
+      if (useSafeMode && !mounted) return;
+      debugAssertNotDisposed();
+    }
+
+    await _fetchFirstPage(operation: 'refresh');
+  }
+
+  /// Refreshes the first page while keeping the currently visible items.
+  ///
+  /// Unlike [refresh], this does not clear loaded pages. Existing items stay on
+  /// screen behind a [PageableStatus.REFRESHING] status and are replaced when
+  /// the fresh first page arrives. If the fetch fails, the existing items are
+  /// preserved and the error is reported.
+  Future<void> refreshSilently() async {
+    if (useSafeMode && !mounted) return;
+
+    trackOperation('refreshSilently');
     debugAssertNotDisposed();
 
     // Prevent multiple simultaneous refresh operations
@@ -1166,7 +1216,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     // Cancel any ongoing operations
     _debounceTimer?.cancel();
     _fetchingPages.clear();
-    _log('Refreshing data');
+    _log('Refreshing data silently');
     final fetchCompleter = _beginFetchOperation();
     final requestId = ++_requestId;
 
@@ -1180,14 +1230,14 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
         clearError: true,
       );
 
-      final items = await _fetchPageWithRetry(firstPageKey, operation: 'refresh');
+      final items = await _fetchPageWithRetry(firstPageKey, operation: 'refreshSilently');
 
       if (requestId != _requestId) {
-        _log('refresh result ignored because a newer operation superseded it');
+        _log('refreshSilently result ignored because a newer operation superseded it');
         return;
       }
       if (useSafeMode && !mounted) {
-        _log('refresh result ignored because controller is disposed');
+        _log('refreshSilently result ignored because controller is disposed');
         return;
       }
       debugAssertNotDisposed();

@@ -150,7 +150,11 @@ void main() {
         await controller.fetchFirstPage();
         expect(controller.itemList, isNotEmpty);
 
-        await controller.refresh();
+        final refreshFuture = controller.refresh();
+        expect(controller.value.status, PageableStatus.LOADING_FIRST_PAGE);
+        expect(controller.itemList, isEmpty);
+
+        await refreshFuture;
 
         expect(controller.itemList, isNotEmpty);
         expect(controller.value.status, isNot(PageableStatus.REFRESHING));
@@ -161,6 +165,22 @@ void main() {
         await controller.refresh();
 
         expect(controller.error, isNull);
+      });
+    });
+
+    group('refreshSilently', () {
+      test('keeps items visible while re-fetching', () async {
+        await controller.fetchFirstPage();
+        final itemsBefore = controller.itemList;
+
+        final refreshFuture = controller.refreshSilently();
+        expect(controller.value.status, PageableStatus.REFRESHING);
+        expect(controller.itemList, itemsBefore);
+
+        await refreshFuture;
+
+        expect(controller.itemList, isNotEmpty);
+        expect(controller.value.status, isNot(PageableStatus.REFRESHING));
       });
     });
 

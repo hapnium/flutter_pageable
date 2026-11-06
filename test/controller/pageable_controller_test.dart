@@ -220,6 +220,26 @@ void main() {
   });
 
   group('refresh', () {
+    test('resets to a fresh first-load state before fetching', () async {
+      final controller = makeController(
+        fetch: (page) async => page == 1 ? ['a', 'b'] : ['c', 'd'],
+        getNextPageKey: (key, items, total) => key + 1,
+      );
+      await controller.fetchFirstPage();
+      await controller.fetchNextPage();
+      await waitForCondition(() => controller.items.length == 4);
+
+      final refreshFuture = controller.refresh();
+      expect(controller.status, PageableStatus.LOADING_FIRST_PAGE);
+      expect(controller.items, isEmpty);
+      expect(controller.pageable.pageCount, 0);
+
+      await refreshFuture;
+      expect(controller.items, ['a', 'b']);
+      expect(controller.pageable.pageCount, 1);
+      controller.dispose();
+    });
+
     test('replaces pages with a single fresh page', () async {
       var round = 1;
       final controller = makeController(
@@ -236,7 +256,7 @@ void main() {
       controller.dispose();
     });
 
-    test('failure with data keeps items and reports the error', () async {
+    test('failure clears data and resolves to FIRST_PAGE_ERROR', () async {
       var fail = false;
       final controller = makeController(
         fetch: (_) async {
@@ -248,8 +268,8 @@ void main() {
       await controller.fetchFirstPage();
       fail = true;
       await controller.refresh();
-      expect(controller.status, PageableStatus.LOADED_PAGE);
-      expect(controller.items, ['a', 'b']);
+      expect(controller.status, PageableStatus.FIRST_PAGE_ERROR);
+      expect(controller.items, isEmpty);
       expect(controller.error, isNotNull);
       controller.dispose();
     });
@@ -260,6 +280,49 @@ void main() {
       );
       await controller.refresh();
       expect(controller.status, PageableStatus.FIRST_PAGE_ERROR);
+      controller.dispose();
+    });
+  });
+
+  group('refreshSilently', () {
+    test('keeps existing items visible while refreshing', () async {
+      final gate = Completer<List<String>>();
+      var round = 1;
+      final controller = makeController(
+        fetch: (_) async {
+          if (round == 1) return ['a', 'b'];
+          return gate.future;
+        },
+      );
+      await controller.fetchFirstPage();
+
+      round = 2;
+      final refreshFuture = controller.refreshSilently();
+      expect(controller.status, PageableStatus.REFRESHING);
+      expect(controller.items, ['a', 'b']);
+
+      gate.complete(['z']);
+      await refreshFuture;
+      expect(controller.items, ['z']);
+      expect(controller.status, PageableStatus.COMPLETED);
+      controller.dispose();
+    });
+
+    test('failure keeps existing items and reports the error', () async {
+      var fail = false;
+      final controller = makeController(
+        fetch: (_) async {
+          if (fail) throw Exception('refresh');
+          return ['a', 'b'];
+        },
+        getNextPageKey: (key, items, total) => key + 1,
+      );
+      await controller.fetchFirstPage();
+      fail = true;
+      await controller.refreshSilently();
+      expect(controller.status, PageableStatus.LOADED_PAGE);
+      expect(controller.items, ['a', 'b']);
+      expect(controller.error, isNotNull);
       controller.dispose();
     });
   });
